@@ -327,6 +327,21 @@ class PopupSimulator:
     # Movement / pathing
     # ----------------------------
 
+    def _approach_cell_for_module(self, mod: Module, from_pos: Tuple[int,int]) -> Tuple[int,int]:
+        """
+        Returns a walkable cell near the module to approach (closest walkable neighbor).
+        """
+        cx, cy = mod.center()
+        candidates = []
+        for dx in range(-1, 2):
+            for dy in range(-1, 2):
+                x, y = cx + dx, cy + dy
+                if 0 <= x < self.W and 0 <= y < self.H and self.blocked[x][y] == 0:
+                    candidates.append((x, y))
+        if not candidates:
+            return from_pos  # fallback
+        return min(candidates, key=lambda c: manhattan(from_pos, c))   
+
     def _neighbors(self, x: int, y: int) -> List[Tuple[int,int]]:
         nbrs = []
         for dx, dy in [(1,0),(-1,0),(0,1),(0,-1)]:
@@ -526,8 +541,14 @@ class PopupSimulator:
                         # MVP: probabilistic exit decision based on time spent
                         time_inside_steps = step - v.entered_step
                         max_steps = int(self.config["sim_params"]["max_visit_minutes"] * 60 / self.step_seconds)
-                        # increasing chance to exit as time grows
-                        p_exit = clamp(time_inside_steps / max(1, max_steps), 0.0, 1.0) * 0.4
+
+                        # hard cutoff: if they've been inside too long, they must leave
+                        if time_inside_steps >= max_steps:
+                            v.state = "exiting"
+                            continue
+
+                        # otherwise small increasing chance to leave
+                        p_exit = clamp(time_inside_steps / max(1, max_steps), 0.0, 1.0) * 0.15
                         if random.random() < p_exit:
                             v.state = "exiting"
                             continue
@@ -538,15 +559,16 @@ class PopupSimulator:
                         chosen = random.choices(mids, weights=probs, k=1)[0]
                         v.target_module_id = chosen
 
-                    # Move toward target module center
+                    # Move toward a walkable approach cell near the target module
                     target_mod = self.modules[v.target_module_id]
-                    goal = target_mod.center()
-                    nxt = self._next_step_toward(v.pos, goal)
+                    module_type = target_mod.type
+
+                    approach = self._approach_cell_for_module(target_mod, v.pos)
+                    nxt = self._next_step_toward(v.pos, approach)
                     v.pos = nxt
 
-                    # If reached adjacency (near module center), attempt to use it
-                    if manhattan(v.pos, goal) <= 1:
-                        module_type = target_mod.type
+                    # If reached the approach cell, attempt to use the module
+                    if v.pos == approach:
                         cap = int(self.module_params[module_type]["capacity"])
 
                         if len(self.module_in_service[v.target_module_id]) < cap:
@@ -557,7 +579,6 @@ class PopupSimulator:
 
                             interacted[vid].append(module_type)
                             v.shared += self._share_increment(v, module_type)
-
                         else:
                             # queue (or skip if too long)
                             q = len(self.module_queue[v.target_module_id])
@@ -587,7 +608,24 @@ class PopupSimulator:
             avg_steps = sum(self.dwell_times_steps) / len(self.dwell_times_steps)
             dwell_time_avg_minutes = (avg_steps * self.step_seconds) / 60.0
 
+        # If visitors are still inside at end, count their shares anyway (MVP)
+        for v in self.visitors.values():
+            if v.state != "done":
+                self.total_shares += v.shared
+
         social_engagement = self.total_shares  # expected shares
+        social_per_entrant = (social_engagement / entrants) if entrants > 0 else 0.0
+
+        # Censored dwell time (counts current time for those still inside)
+        dwell_all_steps = []
+        for v in self.visitors.values():
+            if v.state == "done" and v.exited_step is not None:
+                dwell_all_steps.append(v.exited_step - v.entered_step)
+            else:
+                dwell_all_steps.append(self.steps - v.entered_step)
+
+        avg_steps_all = sum(dwell_all_steps) / len(dwell_all_steps) if dwell_all_steps else 0.0
+        dwell_time_avg_minutes = (avg_steps_all * self.step_seconds) / 60.0
 
         return {
             "inputs": {
@@ -599,7 +637,7 @@ class PopupSimulator:
                 "foot_traffic_inside": foot_traffic_inside,
                 "conversion_rate": conversion_rate,
                 "avg_dwell_time_min": dwell_time_avg_minutes,
-                "social_engagement_expected_shares": social_engagement,
+                "social_per_entrant": social_per_entrant,
             },
             "debug": {
                 "exits_total": exits,
