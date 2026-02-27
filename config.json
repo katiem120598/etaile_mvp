@@ -1,0 +1,99 @@
+{
+  "sim_params": {
+    "time_horizon_min": 60,
+    "step_seconds": 5,
+
+    "passersby_rate_per_min": 6.0,
+    "base_entry_prob": 0.08,
+
+    "entry_visibility_radius_cells": 10,
+    "entry_congestion_radius_cells": 6,
+
+    "entry_logit_a": -1.2,
+    "entry_logit_b": 0.35,
+    "entry_logit_c": 0.10,
+
+    "choice_temperature": 0.8,
+    "max_visit_minutes": 12,
+
+    "min_aisle_width_ft": 3.0
+  },
+
+  "module_params": {
+    "photo_booth": {
+      "attractor": 0.90, "capacity": 1,
+      "dwell_mean_s": 80, "dwell_sd_s": 25,
+      "share_prob": 0.35, "conversion_lift": 0.01,
+      "queue_free": 2, "queue_max": 10
+    },
+    "ar_vr": {
+      "attractor": 0.85, "capacity": 1,
+      "dwell_mean_s": 120, "dwell_sd_s": 40,
+      "share_prob": 0.20, "conversion_lift": 0.01,
+      "queue_free": 1, "queue_max": 8
+    },
+    "physical_experience": {
+      "attractor": 0.80, "capacity": 4,
+      "dwell_mean_s": 90, "dwell_sd_s": 30,
+      "share_prob": 0.18, "conversion_lift": 0.005,
+      "queue_free": 3, "queue_max": 12
+    },
+    "sample_station": {
+      "attractor": 0.60, "capacity": 2,
+      "dwell_mean_s": 35, "dwell_sd_s": 12,
+      "share_prob": 0.03, "conversion_lift": 0.03,
+      "queue_free": 2, "queue_max": 10
+    },
+    "merch_display": {
+      "attractor": 0.55, "capacity": 6,
+      "dwell_mean_s": 45, "dwell_sd_s": 18,
+      "share_prob": 0.02, "conversion_lift": 0.02,
+      "queue_free": 4, "queue_max": 20
+    },
+    "digital_display": {
+      "attractor": 0.35, "capacity": 10,
+      "dwell_mean_s": 12, "dwell_sd_s": 6,
+      "share_prob": 0.01, "conversion_lift": 0.0,
+      "queue_free": 6, "queue_max": 30
+    }
+  },
+
+  "visitor_mix": {
+    "transactional": 0.40,
+    "experiential": 0.40,
+    "social": 0.20
+  },
+
+  "archetypes": {
+    "transactional": {
+      "attraction_mult": {
+        "photo_booth": 0.6, "ar_vr": 0.7, "physical_experience": 0.8,
+        "sample_station": 1.2, "merch_display": 1.5, "digital_display": 1.0
+      },
+      "dwell_mult": 0.8,
+      "queue_beta": 0.45,
+      "share_mult": 0.6,
+      "base_conversion": 0.10
+    },
+    "experiential": {
+      "attraction_mult": {
+        "photo_booth": 1.0, "ar_vr": 1.4, "physical_experience": 1.3,
+        "sample_station": 1.0, "merch_display": 0.9, "digital_display": 1.0
+      },
+      "dwell_mult": 1.2,
+      "queue_beta": 0.30,
+      "share_mult": 1.0,
+      "base_conversion": 0.07
+    },
+    "social": {
+      "attraction_mult": {
+        "photo_booth": 1.6, "ar_vr": 1.2, "physical_experience": 1.1,
+        "sample_station": 0.9, "merch_display": 0.8, "digital_display": 1.0
+      },
+      "dwell_mult": 1.0,
+      "queue_beta": 0.20,
+      "share_mult": 1.6,
+      "base_conversion": 0.05
+    }
+  }
+}
