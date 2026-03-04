@@ -232,6 +232,106 @@ class PopupSimulator:
         if set(self.entry_cells) == set(self.exit_cells):
             raise ValueError("Entry and exit openings are identical; choose different segments.")
 
+        self._validate_entry_exit_connectivity()
+        self._validate_min_aisle_width_path()
+
+    def _validate_entry_exit_connectivity(self):
+        """Ensure there is at least one walkable path from entry opening to exit opening."""
+        entry_open = [(x, y) for (x, y) in self.entry_cells if self.blocked[x][y] == 0]
+        exit_open = set((x, y) for (x, y) in self.exit_cells if self.blocked[x][y] == 0)
+
+        if not entry_open:
+            raise ValueError("Entry opening is fully blocked.")
+        if not exit_open:
+            raise ValueError("Exit opening is fully blocked.")
+
+        q = deque(entry_open)
+        seen = set(entry_open)
+        while q:
+            cur = q.popleft()
+            if cur in exit_open:
+                return
+            for nb in self._neighbors(cur[0], cur[1]):
+                if nb not in seen:
+                    seen.add(nb)
+                    q.append(nb)
+
+        raise ValueError("No walkable path exists from entry to exit with current module placement.")
+
+    def _contiguous_free_run(self, x: int, y: int, axis: str) -> int:
+        if self.blocked[x][y] == 1:
+            return 0
+
+        if axis == "h":
+            left = x
+            while left - 1 >= 0 and self.blocked[left - 1][y] == 0:
+                left -= 1
+            right = x
+            while right + 1 < self.W and self.blocked[right + 1][y] == 0:
+                right += 1
+            return right - left + 1
+
+        if axis == "v":
+            down = y
+            while down - 1 >= 0 and self.blocked[x][down - 1] == 0:
+                down -= 1
+            up = y
+            while up + 1 < self.H and self.blocked[x][up + 1] == 0:
+                up += 1
+            return up - down + 1
+
+        raise ValueError(f"Unknown axis '{axis}'")
+
+    def _is_aisle_cell(self, x: int, y: int) -> bool:
+        if self.blocked[x][y] == 1:
+            return False
+        if self.min_aisle_cells <= 1:
+            return True
+        run_h = self._contiguous_free_run(x, y, "h")
+        run_v = self._contiguous_free_run(x, y, "v")
+        return (run_h >= self.min_aisle_cells) or (run_v >= self.min_aisle_cells)
+
+    def _validate_min_aisle_width_path(self):
+        """
+        Enforce minimum aisle width by requiring an entry->exit path through
+        cells that each satisfy the configured minimum aisle width.
+        """
+        if self.min_aisle_cells <= 1:
+            return
+
+        aisle_ok = [[self._is_aisle_cell(x, y) for y in range(self.H)] for x in range(self.W)]
+        entry_ok = [(x, y) for (x, y) in self.entry_cells if aisle_ok[x][y]]
+        exit_ok = set((x, y) for (x, y) in self.exit_cells if aisle_ok[x][y])
+
+        min_aisle_ft = self.min_aisle_cells * self.cell_size
+
+        if not entry_ok:
+            raise ValueError(
+                f"Entry opening has no cell meeting min_aisle_width_ft={min_aisle_ft:.2f}. "
+                f"Widen opening or move nearby modules."
+            )
+        if not exit_ok:
+            raise ValueError(
+                f"Exit opening has no cell meeting min_aisle_width_ft={min_aisle_ft:.2f}. "
+                f"Widen opening or move nearby modules."
+            )
+
+        q = deque(entry_ok)
+        seen = set(entry_ok)
+        while q:
+            x, y = q.popleft()
+            if (x, y) in exit_ok:
+                return
+            for nx, ny in [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]:
+                if 0 <= nx < self.W and 0 <= ny < self.H and aisle_ok[nx][ny] and (nx, ny) not in seen:
+                    seen.add((nx, ny))
+                    q.append((nx, ny))
+
+        raise ValueError(
+            f"No entry-to-exit path satisfies min_aisle_width_ft={min_aisle_ft:.2f}. "
+            f"Current layout creates one or more narrow choke points."
+        )
+
     # ----------------------------
     # Core behavior models
     # ----------------------------
@@ -667,5 +767,9 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
 
-    result = run_from_files(args.layout, args.config, seed=args.seed)
-    print(json.dumps(result, indent=2))
+    try:
+        result = run_from_files(args.layout, args.config, seed=args.seed)
+        print(json.dumps(result, indent=2))
+    except Exception as e:
+        print(f"Simulation setup/validation error: {e}")
+        raise SystemExit(1)

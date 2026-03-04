@@ -9,68 +9,68 @@
   },
   "entry": {
     "wall": "south",
-    "offset": 13.0,
-    "width": 3.0
+    "offset": 6.0,
+    "width": 5.0
   },
   "exit": {
     "wall": "north",
-    "offset": 20.0,
-    "width": 3.0
+    "offset": 21.0,
+    "width": 4.0
   },
   "modules": [
     {
       "id": "m1",
-      "type": "ar_vr",
-      "x": 5.0,
-      "y": 8.0,
+      "type": "merch_display",
+      "x": 7.0,
+      "y": 30.0,
       "w": 6,
       "h": 6,
       "rot": 0
     },
     {
       "id": "m2",
-      "type": "merch_display",
-      "x": 2.0,
-      "y": 4.0,
+      "type": "sample_station",
+      "x": 6.0,
+      "y": 3.0,
       "w": 10,
       "h": 4,
-      "rot": 90
+      "rot": 180
     },
     {
       "id": "m3",
-      "type": "ar_vr",
-      "x": 18.0,
-      "y": 29.0,
+      "type": "merch_display",
+      "x": 8.0,
+      "y": 24.0,
       "w": 4,
       "h": 4,
-      "rot": 90
+      "rot": 270
     },
     {
       "id": "m4",
-      "type": "merch_display",
+      "type": "photo_booth",
       "x": 13.0,
-      "y": 22.0,
+      "y": 27.0,
       "w": 6,
       "h": 6,
       "rot": 270
     },
     {
       "id": "m5",
-      "type": "ar_vr",
-      "x": 12.0,
-      "y": 16.0,
+      "type": "physical_experience",
+      "x": 15.0,
+      "y": 12.0,
       "w": 6,
       "h": 2,
-      "rot": 90
+      "rot": 180
     },
     {
       "id": "m6",
-      "type": "ar_vr",
-      "x": 18.0,
-      "y": 2.0,
+      "type": "digital_display",
+      "x": 19.0,
+      "y": 1.0,
       "w": 10,
       "h": 10,
-      "rot": 90
+      "rot": 180
     }
   ]
 }
