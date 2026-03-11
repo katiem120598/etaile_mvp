@@ -10,6 +10,40 @@ python batch_run.py --config config.json --save_variants_dir variants --n_layout
 CAN ALSO ADD ARG FOR RANDOM SEED IF WANT
 --base_seed 42
 
+### Week 1: Optimization (Hill Climb)
+Runs a simple AI-assisted layout optimization loop (propose neighbors → simulate → score → accept improvements),
+logs metric deltas each iteration, writes the best layout, and prints the top suggested change sets.
+
+python optimize.py --layout layout.json --config config.json --iters 40 --neighbors 25 --runs_per_layout 3 --save_best best_layout.json --log_csv opt_log.csv
+
+#### Optimization outputs (where to find results)
+- **Best layout JSON**: `best_layout.json` (or whatever you pass via `--save_best`)
+  - This is a normal layout file in the same schema as `layout.json`.
+  - You can simulate it directly with:
+    - `python popup_sim.py --layout best_layout.json --config config.json --seed 42`
+- **Iteration log**: `opt_log.csv` (or whatever you pass via `--log_csv`)
+  - One row per iteration (including iteration 0 = baseline), containing:
+    - `score`: weighted ROE score for the **accepted** layout at that iteration
+    - `score_delta_vs_baseline`: how much score has improved vs iteration 0
+    - `score_delta_vs_prev`: change vs previous accepted iteration (0 when not accepted)
+    - The averaged metrics: `conversion_rate`, `entry_rate`, `avg_dwell_time_min`, `social_per_entrant`
+- **Console summary** (printed at the end)
+  - `Baseline:` metrics for the starting layout
+  - `Best:` metrics for the best layout found during the search
+  - `Top K suggested change sets (vs baseline):` the best improvement candidates, shown as:
+    - `dScore/dConv/dEntry/dDwell/dSocial`: metric deltas vs the baseline
+    - Bullets like `move m6: dx=0 cells, dy=2 cells`, `swap positions: m2 <-> m6`, `entry: offset ...`
+
+#### How to interpret the optimization results
+- **Score is a weighted blend** of the 4 metrics (same as `batch_run.py` scoring):
+  - `conversion_rate` and `entry_rate` contribute directly.
+  - `avg_dwell_time_min` and `social_per_entrant` are normalized vs targets (`target_dwell_min`, `target_social`)
+    before weighting.
+  - Override weights/targets with `--weights_json` (file path or raw JSON string) to reflect different goals.
+- **Suggested changes are relative to the baseline layout**, not relative to the previous iteration.
+  - If you want “step-by-step” change history, use `opt_log.csv` + the saved `best_layout.json` to compare
+    the baseline against the final output (or rerun with fewer iterations for a more incremental path).
+
 ### Modifications with Web Input
 places where code might need to be modified once the UI is integrated are denoted with comment ###CHANGE
 
